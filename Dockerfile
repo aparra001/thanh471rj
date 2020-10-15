@@ -24,7 +24,7 @@ mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 \
 && rm -rf /var/lib/apt/lists/* \
 
 # Git repo set up
-RUN git clone https://github.com/ethereum-mining/ethminer.git; \
+RUN git clone https://github.com/ethereum-mining/ethminer; \
     cd ethminer; \
     git checkout tags/v0.18.0
 
