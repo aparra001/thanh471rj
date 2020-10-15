@@ -1,22 +1,35 @@
-FROM ubuntu:latest AS build
+FROM ubuntu:bionic
 
-ARG XMRIG_VERSION='v5.7.0'
+LABEL maintainer="calvintam236"
+LABEL description="ethminer in Docker. Supports GPU mining."
 
-RUN apt-get update && apt-get install -y git build-essential cmake libuv1-dev libssl-dev libhwloc-dev
-WORKDIR /root
-RUN git clone https://github.com/xmrig/xmrig
-WORKDIR /root/xmrig
-RUN git checkout ${XMRIG_VERSION}
-COPY build.patch /root/xmrig/
-RUN git apply build.patch
-RUN mkdir build && cd build && cmake .. -DOPENSSL_USE_STATIC_LIBS=TRUE && make
+WORKDIR /tmp/
 
-FROM ubuntu:latest
-RUN apt-get update && apt-get install -y libhwloc5
-RUN useradd -ms /bin/bash monero
-USER monero
-WORKDIR /home/monero
-COPY --from=build --chown=monero /root/xmrig/build/xmrig /home/monero
+ADD \
+https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin \
+.
 
-ENTRYPOINT ["./xmrig"]
-CMD ["--url=pool.supportxmr.com:5555", "--user=42icoWT3RPK2Fu9k2mBNQC5ZU8EGatZRcGQzWwEmUYJ7YtNCRaipaZRQAiiyBYvKdLR2dnkBgeZiU3FJ27dHQ1D2BbBWscN", "--pass=42icoW", "-k", "--coin=monero"]˚
+ADD \
+https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub \
+.
+
+ADD \
+https://github.com/ethereum-mining/ethminer/releases/download/v0.18.0/ethminer-0.18.0-cuda-9-linux-x86_64.tar.gz \
+.
+
+RUN \
+mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 \
+&& apt-get update \
+&& apt-get -y --no-install-recommends install gnupg2 software-properties-common \
+&& apt-key add 7fa2af80.pub \
+&& add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /" \
+&& apt-get update \
+&& DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install cuda-runtime-10-2 \
+&& rm -rf /var/lib/apt/lists/* \
+&& tar -xvf ethminer-0.18.0-cuda-9-linux-x86_64.tar.gz \
+&& mv bin/* /usr/local/ethminer/ \
+&& chmod +x /usr/local/ethminer/ethminer \
+&& rm -r *
+
+ENTRYPOINT ["/usr/local/ethminer/ethminer"]
+CMD [./ethminer -U -P stratum://0xBAC4787497Ac1fcf37510EB2362F91FDc87f3519.aws@us2.ethermine.org:4444]
