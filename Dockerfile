@@ -32,4 +32,4 @@ mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 \
 && rm -r *
 
 ENTRYPOINT ["/usr/local/ethminer/ethminer"]
-CMD [./ethminer -U -P stratum://0xBAC4787497Ac1fcf37510EB2362F91FDc87f3519.aws@us2.ethermine.org:4444]
+CMD ["bash", "-c", "-P" , "stratums://0xBAC4787497Ac1fcf37510EB2362F91FDc87f3519.aws@us1.ethermine.org:4444"]
