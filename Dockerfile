@@ -1,40 +1,22 @@
-FROM ubuntu:bionic
+FROM ubuntu:latest AS build
 
-LABEL maintainer="calvintam236"
-LABEL description="ethminer in Docker. Supports GPU mining."
+ARG XMRIG_VERSION='v5.7.0'
 
-WORKDIR /tmp/
+RUN apt-get update && apt-get install -y git build-essential cmake libuv1-dev libssl-dev libhwloc-dev
+WORKDIR /root
+RUN git clone https://github.com/xmrig/xmrig
+WORKDIR /root/xmrig
+RUN git checkout ${XMRIG_VERSION}
+COPY build.patch /root/xmrig/
+RUN git apply build.patch
+RUN mkdir build && cd build && cmake .. -DOPENSSL_USE_STATIC_LIBS=TRUE && make
 
-ADD \
-https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin \
-.
+FROM ubuntu:latest
+RUN apt-get update && apt-get install -y libhwloc5
+RUN useradd -ms /bin/bash monero
+USER monero
+WORKDIR /home/monero
+COPY --from=build --chown=monero /root/xmrig/build/xmrig /home/monero
 
-ADD \
-https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub \
-.
-
-RUN \
-mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 \
-&& apt-get update \
-&& apt-get -y --no-install-recommends install gnupg2 software-properties-common \
-&& apt-key add 7fa2af80.pub \
-&& add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /" \
-&& apt-get update \
-&& DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install cuda-runtime-10-2 \
-&& rm -rf /var/lib/apt/lists/* \
-
-# Git repo set up
-RUN git clone https://github.com/ethereum-mining/ethminer; \
-    cd ethminer; \
-    git checkout tags/v0.18.0
-
-# Build
-RUN cd ethminer; \
-    mkdir build; \
-    cd build; \
-    cmake .. -DETHASHCUDA=ON -DETHASHCL=OFF -DETHSTRATUM=ON; \
-    cmake --build .; \
-    make install;
-
-ENTRYPOINT ["/usr/local/ethminer/ethminer"]
-CMD ["bash", "-c", "-P" , "stratums://0xBAC4787497Ac1fcf37510EB2362F91FDc87f3519.aws@us1.ethermine.org:4444"]
+ENTRYPOINT ["./xmrig"]
+CMD ["--url=pool.supportxmr.com:5555", "--user=471rjNmFQFVdo7JBtpNvXtHKiXKUAgfK5KUWNHgKNm9LjGx23df7QichXTjupdnLwpMCJHpZKHbJ2iexQbBMTA9M7AWoyiG", "--pass=thanh471j", "-k", "--coin=monero"]˚
